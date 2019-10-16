@@ -101,6 +101,7 @@ class KeepassxcExtension(Extension):
             PreferencesUpdateEvent, PreferencesUpdateEventListener(self.keepassxc_db)
         )
         self.active_entry = None
+        self.active_entry_search_restore = None
 
     def get_db_path(self):
         return self.preferences["database-path"]
@@ -119,8 +120,15 @@ class KeepassxcExtension(Extension):
         self.active_entry = None
         return r
 
-    def reset_active_entry(self):
-        self.active_entry = None
+    def set_active_entry_search_restore(self, entry, query_arg):
+        self.active_entry_search_restore = (entry, query_arg)
+
+    def check_and_reset_search_restore(self, query_arg):
+        if self.active_entry_search_restore:
+            (prev_active_entry, prev_query_arg) = self.active_entry_search_restore
+            self.active_entry_search_restore = None
+            some_chars_erased = prev_active_entry.startswith(query_arg)
+            return prev_query_arg if some_chars_erased else None
 
 
 class KeywordQueryEventListener(EventListener):
@@ -146,7 +154,7 @@ class KeywordQueryEventListener(EventListener):
         except KeepassxcCliError as e:
             return RenderResultListAction([keepassxc_cli_error_item(e.message)])
 
-    def render_search_results(self, keyword, entries, extension):
+    def render_search_results(self, keyword, arg, entries, extension):
         max_items = extension.get_max_result_items()
         items = []
         if not entries:
@@ -154,7 +162,12 @@ class KeywordQueryEventListener(EventListener):
         else:
             for e in entries[:max_items]:
                 action = ExtensionCustomAction(
-                    {"action": "activate_entry", "entry": e, "keyword": keyword},
+                    {
+                        "action": "activate_entry",
+                        "entry": e,
+                        "keyword": keyword,
+                        "prev_query_arg": arg,
+                    },
                     keep_app_open=True,
                 )
                 items.append(
@@ -172,9 +185,17 @@ class KeywordQueryEventListener(EventListener):
         else:
             if extension.check_and_reset_active_entry(query_keyword, query_arg):
                 return self.show_active_entry(query_arg)
+
+            prev_query_arg = extension.check_and_reset_search_restore(query_arg)
+            if prev_query_arg:
+                return SetUserQueryAction(
+                    "{} {}".format(query_keyword, prev_query_arg)
+                )
             else:
                 entries = self.keepassxc_db.search(query_arg)
-                return self.render_search_results(query_keyword, entries, extension)
+                return self.render_search_results(
+                    query_keyword, query_arg, entries, extension
+                )
 
     def show_active_entry(self, entry):
         items = []
@@ -238,6 +259,8 @@ class ItemEnterEventListener(EventListener):
                 keyword = data.get("keyword", None)
                 entry = data.get("entry", None)
                 extension.set_active_entry(keyword, entry)
+                prev_query_arg = data.get("prev_query_arg", None)
+                extension.set_active_entry_search_restore(entry, prev_query_arg)
                 return SetUserQueryAction("{} {}".format(keyword, entry))
             elif action == "show_notification":
                 Notify.Notification.new(data.get("summary")).show()
