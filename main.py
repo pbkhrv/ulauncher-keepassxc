@@ -102,6 +102,7 @@ class KeepassxcExtension(Extension):
         )
         self.active_entry = None
         self.active_entry_search_restore = None
+        self.recent_active_entries = []
 
     def get_db_path(self):
         return self.preferences["database-path"]
@@ -129,6 +130,18 @@ class KeepassxcExtension(Extension):
             self.active_entry_search_restore = None
             some_chars_erased = prev_active_entry.startswith(query_arg)
             return prev_query_arg if some_chars_erased else None
+
+    def add_recent_active_entry(self, entry):
+        """
+        Add an entry to the head of the recent active entries list.
+        Make sure the entry appears in the list only once.
+        """
+        if entry in self.recent_active_entries:
+            idx = self.recent_active_entries.index(entry)
+            del self.recent_active_entries[idx]
+        self.recent_active_entries = [entry] + self.recent_active_entries
+        max_items = self.get_max_result_items()
+        self.recent_active_entries = self.recent_active_entries[:max_items]
 
 
 class KeywordQueryEventListener(EventListener):
@@ -181,16 +194,19 @@ class KeywordQueryEventListener(EventListener):
         query_keyword = event.get_keyword()
         query_arg = event.get_argument()
         if not query_arg:
-            return RenderResultListAction([ENTER_QUERY_ITEM])
+            if extension.recent_active_entries:
+                return self.render_search_results(
+                    query_keyword, "", extension.recent_active_entries, extension
+                )
+            else:
+                return RenderResultListAction([ENTER_QUERY_ITEM])
         else:
             if extension.check_and_reset_active_entry(query_keyword, query_arg):
                 return self.show_active_entry(query_arg)
 
             prev_query_arg = extension.check_and_reset_search_restore(query_arg)
             if prev_query_arg:
-                return SetUserQueryAction(
-                    "{} {}".format(query_keyword, prev_query_arg)
-                )
+                return SetUserQueryAction("{} {}".format(query_keyword, prev_query_arg))
             else:
                 entries = self.keepassxc_db.search(query_arg)
                 return self.render_search_results(
@@ -261,6 +277,7 @@ class ItemEnterEventListener(EventListener):
                 extension.set_active_entry(keyword, entry)
                 prev_query_arg = data.get("prev_query_arg", None)
                 extension.set_active_entry_search_restore(entry, prev_query_arg)
+                extension.add_recent_active_entry(entry)
                 return SetUserQueryAction("{} {}".format(keyword, entry))
             elif action == "show_notification":
                 Notify.Notification.new(data.get("summary")).show()
