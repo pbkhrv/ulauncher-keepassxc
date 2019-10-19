@@ -143,6 +143,17 @@ class KeepassxcExtension(Extension):
         max_items = self.get_max_result_items()
         self.recent_active_entries = self.recent_active_entries[:max_items]
 
+    def database_path_changed(self):
+        """
+        We are now using a different database file - do something about that.
+        """
+        # Shouldn't be showing recent entries from another database
+        self.recent_active_entries = []
+
+        # Active entry and old search no longer valid
+        self.active_entry = None
+        self.active_entry_search_restore = None
+
 
 class KeywordQueryEventListener(EventListener):
     """ KeywordQueryEventListener class used to manage user input """
@@ -307,6 +318,7 @@ class PreferencesUpdateEventListener(EventListener):
         if event.new_value != event.old_value:
             if event.id == "database-path":
                 self.keepassxc_db.change_path(event.new_value)
+                extension.database_path_changed()
             elif event.id == "inactivity-lock-timeout":
                 self.keepassxc_db.change_inactivity_lock_timeout(int(event.new_value))
 
