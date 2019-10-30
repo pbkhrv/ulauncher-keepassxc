@@ -42,6 +42,17 @@ Look at the `Github work` entry:
 
 ![Entry details](images/screenshots/details1.png)
 
+## Troubleshooting
+
+### Why doesn't the passphrase window come to the foreground when it's asking me to unlock the database?
+
+Please install [wmctrl](http://tripie.sweb.cz/utils/wmctrl/) - it's a utility that ulauncher-keepassxc calls to "activate" the passphrase window and bring it to the top:
+
+**Ubuntu and Debian**
+```shell
+sudo apt-get install wmctrl
+```
+
 ## Inspiration and thanks
 
 I loved Alfred on MacOS, and now I love Ulauncher on Linux. The Python API is a joy to work with.

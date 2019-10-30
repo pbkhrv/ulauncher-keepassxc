@@ -1,3 +1,4 @@
+from threading import Timer
 import gi
 
 gi.require_version("Notify", "0.7")
@@ -26,6 +27,7 @@ from keepassxc_db import (
     KeepassxcCliError,
 )
 from gtk_passphrase_entry import GtkPassphraseEntryWindow
+from wmctrl import activate_window_by_class_name, WmctrlNotFoundError
 
 SEARCH_ICON = "images/keepassxc-search.svg"
 UNLOCK_ICON = "images/keepassxc-search-locked.svg"
@@ -88,6 +90,19 @@ def keepassxc_cli_error_item(message):
         description=message,
         on_enter=DoNothingAction(),
     )
+
+
+def activate_passphrase_window():
+    """
+    Use wmctrl to bring the passphrase window to the top
+
+    Class name is set somewhere inside Gtk/Gdk to the "file name" + "program class"
+    "Program class" is set in below
+    """
+    try:
+        activate_window_by_class_name("main.py.KeePassXC Search")
+    except WmctrlNotFoundError:
+        logger.warn("wmctrl not installed, unable to activate passphrase entry window")
 
 
 class KeepassxcExtension(Extension):
@@ -301,10 +316,17 @@ class ItemEnterEventListener(EventListener):
             return RenderResultListAction([keepassxc_cli_error_item(e.message)])
 
     def read_verify_passphrase(self, extension):
+        """
+        Create a passphrase entry window and get the passphrase, or not
+        """
         win = GtkPassphraseEntryWindow(
             verify_passphrase_fn=self.keepassxc_db.verify_and_set_passphrase,
             icon_file="images/keepassxc-search.svg",
         )
+
+        # Activate the passphrase entry window from a separate thread
+        Timer(0.5, activate_passphrase_window).start()
+
         win.read_passphrase()
         if not self.keepassxc_db.need_passphrase():
             Notify.Notification.new("KeePassXC database unlocked.").show()
