@@ -1,11 +1,11 @@
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, Gdk
 
 
 class GtkPassphraseEntryWindow(Gtk.Window):
-    def __init__(self, verify_passphrase_fn=None):
+    def __init__(self, verify_passphrase_fn=None, icon_file=None):
         Gtk.Window.__init__(self, title="Enter Passphrase")
 
         self.verify_passphrase_fn = verify_passphrase_fn
@@ -28,6 +28,8 @@ class GtkPassphraseEntryWindow(Gtk.Window):
 
         self.set_position(Gtk.WindowPosition.CENTER)
         self.set_resizable(False)
+        if icon_file:
+            self.set_default_icon_from_file(icon_file)
 
     def close_window(self):
         self.destroy()
@@ -65,3 +67,8 @@ class GtkPassphraseEntryWindow(Gtk.Window):
         self.show_all()
         Gtk.main()
         return self.passphrase
+
+if __name__=="__main__":
+    Gdk.set_program_class("KeePassXC search")
+    win = GtkPassphraseEntryWindow(icon_file="images/keepassxc-search.svg")
+    print(win.read_passphrase())

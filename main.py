@@ -1,7 +1,8 @@
 import gi
 
 gi.require_version("Notify", "0.7")
-from gi.repository import Notify
+gi.require_version("Gdk", "3.0")
+from gi.repository import Notify, Gdk
 from ulauncher.api.client.Extension import Extension
 from ulauncher.api.client.EventListener import EventListener
 from ulauncher.api.shared.event import (
@@ -301,7 +302,8 @@ class ItemEnterEventListener(EventListener):
 
     def read_verify_passphrase(self, extension):
         win = GtkPassphraseEntryWindow(
-            verify_passphrase_fn=self.keepassxc_db.verify_and_set_passphrase
+            verify_passphrase_fn=self.keepassxc_db.verify_and_set_passphrase,
+            icon_file="images/keepassxc-search.svg",
         )
         win.read_passphrase()
         if not self.keepassxc_db.need_passphrase():
@@ -324,6 +326,7 @@ class PreferencesUpdateEventListener(EventListener):
 
 
 if __name__ == "__main__":
+    Gdk.set_program_class("KeePassXC Search")
     Notify.init("ulauncher-keepassxc")
     KeepassxcExtension().run()
     Notify.uninit()
