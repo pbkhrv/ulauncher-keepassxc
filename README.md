@@ -8,11 +8,10 @@ A [Ulauncher](https://ulauncher.io/) extension to search your [KeePassXC](https:
 - Work with any file (.kdbx etc) that can be accessed by the KeePassXC itself via the `keepassxc-cli` command line tool
 - Support files locked with a passphrase. The extension asks for the passphrase and stores it in memory for a configurable amount of time
 - Doesn't require the KeePassXC app to be running
-- Tested with KeePassXC CLI versions 2.4.3 and 2.5.0
 
 ## Requirements
 
-- Install a recent version of [KeePassXC](https://keepassxc.org/download/)
+- Install a recent version of [KeePassXC](https://keepassxc.org/download/) (tested with 2.4.3 and 2.5.0)
 - Make sure you can execute `keepassxc-cli` in a terminal
 
 ## Installation
