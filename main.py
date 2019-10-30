@@ -1,3 +1,5 @@
+import os
+import sys
 from threading import Timer
 import gi
 
@@ -103,6 +105,13 @@ def activate_passphrase_window():
         activate_window_by_class_name("main.py.KeePassXC Search")
     except WmctrlNotFoundError:
         logger.warn("wmctrl not installed, unable to activate passphrase entry window")
+
+
+def current_script_path():
+    """
+    Return path to where the currently executing script is located
+    """
+    return os.path.abspath(os.path.dirname(sys.argv[0]))
 
 
 class KeepassxcExtension(Extension):
@@ -321,7 +330,9 @@ class ItemEnterEventListener(EventListener):
         """
         win = GtkPassphraseEntryWindow(
             verify_passphrase_fn=self.keepassxc_db.verify_and_set_passphrase,
-            icon_file="images/keepassxc-search.svg",
+            icon_file=os.path.join(
+                current_script_path(), "images/keepassxc-search.svg"
+            ),
         )
 
         # Activate the passphrase entry window from a separate thread
