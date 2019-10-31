@@ -62,3 +62,7 @@ Thanks to [pass-ulauncher](https://github.com/yannishuber/pass-ulauncher) for th
 [The Noun Project](https://thenounproject.com/) for the icons - there's nothing else quite like it.
 
 Finally, thanks to [KeePassXC](https://keepassxc.org/) on Linux and [KyPass](https://www.kyuran.be/software/kypass/) on iOS.
+
+## License
+
+MIT license. See [LICENSE](LICENSE) file for details.
