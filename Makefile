@@ -1,13 +1,9 @@
-pkg = keepassxc
-ext = ulauncher-keepassxc
-
-
 init:
 	pip3 install -r dev/requirements.txt
 
 test:
-	pylint $(pkg)/
-	eval "PYTHONPATH=`pwd` py.test -v --doctest-modules --flake8 tests/ $(pkg)/"
+	pylint keepassxc/
+	eval "PYTHONPATH=`pwd` py.test -v --doctest-modules --flake8 tests/ keepassxc/"
 
 run_ul:
 	ulauncher --no-extensions --dev -v
