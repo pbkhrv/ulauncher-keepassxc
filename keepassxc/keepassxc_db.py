@@ -23,6 +23,12 @@ class KeepassxcFileNotFoundError(Exception):
     """
 
 
+class KeepassxcLockedDbError(Exception):
+    """
+    Attempting to access locked database
+    """
+
+
 class KeepassxcCliError(Exception):
     """ Contains error message returned by keepassxc-cli """
 
@@ -114,6 +120,9 @@ class KeepassxcDatabase:
         """
         Search the database for entry titles that contain the given query string
         """
+        if self.is_passphrase_needed():
+            raise KeepassxcLockedDbError()
+
         (err, out) = self.run_cli("locate", "-q", self.path, query)
         if err:
             if "No results for that" in err:
@@ -138,6 +147,9 @@ class KeepassxcDatabase:
         :param entry: full name of the entry, without the leading '/'
         :returns: dict of entry attributes and their values
         """
+        if self.is_passphrase_needed():
+            raise KeepassxcLockedDbError()
+
         attrs = dict()
         for attr in ["UserName", "Password", "URL", "Notes"]:
             (err, out) = self.run_cli("show", "-q", "-a", attr, self.path, f"/{entry}")

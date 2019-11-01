@@ -1,1 +1,1 @@
-watchexec -c -w keepassxc -w tests make test
+watchexec -c -w keepassxc -w tests/keepassxc make test
