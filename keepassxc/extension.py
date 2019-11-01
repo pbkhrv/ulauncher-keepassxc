@@ -131,6 +131,9 @@ def current_script_path():
 class KeepassxcExtension(Extension):
     """ Extension class, coordinates everything """
 
+    # REORG: break up into Keepassxc and KeepassxcExtension, like NotesNv one
+    # store instances of keepassxc_db in a dict keyed by "database_id"
+    # that's tied to preferences - allows for multidb support
     def __init__(self):
         super(KeepassxcExtension, self).__init__()
         self.keepassxc_db = KeepassxcDatabase()
@@ -220,6 +223,7 @@ class KeepassxcExtension(Extension):
         self.active_entry_search_restore = None
 
 
+# REORG: move into "render.py"
 def render_search_results(keyword, arg, entries, max_items):
     """
     Build list of result items `max_items` long
@@ -248,6 +252,8 @@ def render_search_results(keyword, arg, entries, max_items):
 
 class KeywordQueryEventListener(EventListener):
     """ KeywordQueryEventListener class used to manage user input """
+
+    # REORG: move these into Keepassxc
 
     def __init__(self, keepassxc_db):
         self.keepassxc_db = keepassxc_db
@@ -301,6 +307,9 @@ class KeywordQueryEventListener(EventListener):
         """
         Retrieve entry details from database and render them
         """
+        # REORG: break this up into
+        # - "get_entry_details" + erorr handling
+        # - render active entry
         items = []
         details = self.keepassxc_db.get_entry_details(entry)
         attrs = [
@@ -348,6 +357,8 @@ class KeywordQueryEventListener(EventListener):
 
 class ItemEnterEventListener(EventListener):
     """ KeywordQueryEventListener class used to manage user input """
+
+    # REORG: use "method_caller" to move this logic into Keepassxc class
 
     def __init__(self, keepassxc_db):
         self.keepassxc_db = keepassxc_db
@@ -405,6 +416,9 @@ class PreferencesUpdateEventListener(EventListener):
     def on_event(self, event, extension):
         if event.new_value != event.old_value:
             if event.id == "database-path":
+                # REORG: only call keepassxc
+                # Pass "database_id" that will allow us to add multiple dbs
+                # keepassxc would store databases in a dict
                 self.keepassxc_db.change_path(event.new_value)
                 extension.database_path_changed()
             elif event.id == "inactivity-lock-timeout":
