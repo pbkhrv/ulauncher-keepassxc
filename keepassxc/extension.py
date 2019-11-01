@@ -6,9 +6,6 @@ import os
 import sys
 from threading import Timer
 import gi
-
-gi.require_version("Notify", "0.7")
-from gi.repository import Notify
 from ulauncher.api.client.Extension import Extension
 from ulauncher.api.client.EventListener import EventListener
 from ulauncher.api.shared.event import (
@@ -24,14 +21,18 @@ from ulauncher.api.shared.action.ExtensionCustomAction import ExtensionCustomAct
 from ulauncher.api.shared.action.ActionList import ActionList
 from ulauncher.api.shared.action.SetUserQueryAction import SetUserQueryAction
 from ulauncher.api.shared.action.CopyToClipboardAction import CopyToClipboardAction
-from keepassxc_db import (
+from .keepassxc_db import (
     KeepassxcDatabase,
     KeepassxcCliNotFoundError,
     KeepassxcFileNotFoundError,
     KeepassxcCliError,
 )
-from gtk_passphrase_entry import GtkPassphraseEntryWindow
-from wmctrl import activate_window_by_class_name, WmctrlNotFoundError
+from .gtk_passphrase_entry import GtkPassphraseEntryWindow
+from .wmctrl import activate_window_by_class_name, WmctrlNotFoundError
+
+gi.require_version("Notify", "0.7")
+# pylint: disable=wrong-import-order
+from gi.repository import Notify  # noqa: E402
 
 
 logger = logging.getLogger(__name__)
@@ -54,7 +55,7 @@ KEEPASSXC_CLI_NOT_FOUND_ITEM = ExtensionResultItem(
 KEEPASSXC_DB_NOT_FOUND_ITEM = ExtensionResultItem(
     icon=ERROR_ICON,
     name="Cannot find the database file",
-    description="Please verify the password database file path in extension preferences",
+    description="Please verify the database file path in extension preferences",
     on_enter=DoNothingAction(),
 )
 

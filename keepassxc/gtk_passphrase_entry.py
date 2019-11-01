@@ -4,7 +4,8 @@ Simple passphrase entry Gtk window
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, Gdk
+# pylint: disable=wrong-import-order
+from gi.repository import Gtk, Gdk  # noqa: E402
 
 
 class GtkPassphraseEntryWindow(Gtk.Window):
