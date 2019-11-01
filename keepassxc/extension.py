@@ -6,6 +6,7 @@ import os
 import sys
 from threading import Timer
 import gi
+
 gi.require_version("Notify", "0.7")
 from gi.repository import Notify
 from ulauncher.api.client.Extension import Extension
@@ -31,7 +32,6 @@ from keepassxc_db import (
 )
 from gtk_passphrase_entry import GtkPassphraseEntryWindow
 from wmctrl import activate_window_by_class_name, WmctrlNotFoundError
-
 
 
 logger = logging.getLogger(__name__)
@@ -143,26 +143,51 @@ class KeepassxcExtension(Extension):
         self.recent_active_entries = []
 
     def get_db_path(self):
-        return self.preferences["database-path"]
+        """
+        Normalized and expanded path to the database file
+        """
+        return os.path.expanduser(self.preferences["database-path"])
 
     def get_max_result_items(self):
+        """
+        Maximum number of search results to show on screen
+        """
         return int(self.preferences["max-results"])
 
     def get_inactivity_lock_timeout(self):
+        """
+        How long to wait to lock the database after last user interaction
+        """
         return int(self.preferences["inactivity-lock-timeout"])
 
     def set_active_entry(self, keyword, entry):
+        """
+        Save the search keyword and full name of the entry that user activated
+        by selecting one of the search results
+        """
         self.active_entry = (keyword, entry)
 
     def check_and_reset_active_entry(self, keyword, entry):
+        """
+        Whether the search query is actually a request to render
+        the active entry that was saved just before
+        """
         entry = self.active_entry == (keyword, entry)
         self.active_entry = None
         return entry
 
     def set_active_entry_search_restore(self, entry, query_arg):
+        """
+        Save the search arg that we should return to if given entry
+        is being erased - allows user to back out of an active entry
+        by pressing Backspace
+        """
         self.active_entry_search_restore = (entry, query_arg)
 
     def check_and_reset_search_restore(self, query_arg):
+        """
+        Whether to re-run a search query after backing out from an active entry
+        """
         if self.active_entry_search_restore:
             (prev_active_entry, prev_query_arg) = self.active_entry_search_restore
             self.active_entry_search_restore = None
@@ -194,6 +219,32 @@ class KeepassxcExtension(Extension):
         self.active_entry_search_restore = None
 
 
+def render_search_results(keyword, arg, entries, max_items):
+    """
+    Build list of result items `max_items` long
+    """
+    items = []
+    if not entries:
+        items.append(NO_SEARCH_RESULTS_ITEM)
+    else:
+        for entry in entries[:max_items]:
+            action = ExtensionCustomAction(
+                {
+                    "action": "activate_entry",
+                    "entry": entry,
+                    "keyword": keyword,
+                    "prev_query_arg": arg,
+                },
+                keep_app_open=True,
+            )
+            items.append(
+                ExtensionSmallResultItem(icon=ITEM_ICON, name=entry, on_enter=action)
+            )
+        if len(entries) > max_items:
+            items.append(more_results_available_item(len(entries) - max_items))
+    return RenderResultListAction(items)
+
+
 class KeywordQueryEventListener(EventListener):
     """ KeywordQueryEventListener class used to manage user input """
 
@@ -206,7 +257,7 @@ class KeywordQueryEventListener(EventListener):
                 extension.get_db_path(), extension.get_inactivity_lock_timeout()
             )
 
-            if self.keepassxc_db.need_passphrase():
+            if self.keepassxc_db.is_passphrase_needed():
                 return RenderResultListAction([NEED_PASSPHRASE_ITEM])
             return self.process_keyword_query(event, extension)
         except KeepassxcCliNotFoundError:
@@ -216,39 +267,20 @@ class KeywordQueryEventListener(EventListener):
         except KeepassxcCliError as exc:
             return RenderResultListAction([keepassxc_cli_error_item(exc.message)])
 
-    def render_search_results(self, keyword, arg, entries, extension):
-        max_items = extension.get_max_result_items()
-        items = []
-        if not entries:
-            items.append(NO_SEARCH_RESULTS_ITEM)
-        else:
-            for entry in entries[:max_items]:
-                action = ExtensionCustomAction(
-                    {
-                        "action": "activate_entry",
-                        "entry": entry,
-                        "keyword": keyword,
-                        "prev_query_arg": arg,
-                    },
-                    keep_app_open=True,
-                )
-                items.append(
-                    ExtensionSmallResultItem(
-                        icon=ITEM_ICON, name=entry, on_enter=action
-                    )
-                )
-            if len(entries) > max_items:
-                items.append(more_results_available_item(len(entries) - max_items))
-        return RenderResultListAction(items)
-
     def process_keyword_query(self, event, extension):
+        """
+        Handle a search query entered by user
+        """
         query_keyword = event.get_keyword()
         query_arg = event.get_argument()
 
         if not query_arg:
             if extension.recent_active_entries:
-                return self.render_search_results(
-                    query_keyword, "", extension.recent_active_entries, extension
+                return render_search_results(
+                    query_keyword,
+                    "",
+                    extension.recent_active_entries,
+                    extension.get_max_result_items(),
                 )
             return RenderResultListAction([ENTER_QUERY_ITEM])
 
@@ -260,9 +292,14 @@ class KeywordQueryEventListener(EventListener):
             return SetUserQueryAction("{} {}".format(query_keyword, prev_query_arg))
 
         entries = self.keepassxc_db.search(query_arg)
-        return self.render_search_results(query_keyword, query_arg, entries, extension)
+        return render_search_results(
+            query_keyword, query_arg, entries, extension.get_max_result_items()
+        )
 
     def show_active_entry(self, entry):
+        """
+        Retrieve entry details from database and render them
+        """
         items = []
         details = self.keepassxc_db.get_entry_details(entry)
         attrs = [
@@ -353,10 +390,11 @@ class ItemEnterEventListener(EventListener):
         Timer(0.5, activate_passphrase_window).start()
 
         win.read_passphrase()
-        if not self.keepassxc_db.need_passphrase():
+        if not self.keepassxc_db.is_passphrase_needed():
             Notify.Notification.new("KeePassXC database unlocked.").show()
 
 
+# pylint: disable=too-few-public-methods
 class PreferencesUpdateEventListener(EventListener):
     """ Handle preferences updates """
 

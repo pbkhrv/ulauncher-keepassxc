@@ -1,29 +1,34 @@
+"""
+Wrapper around the KeePassXC CLI
+
+Features:
+    - Keep track of passphrase unlock and inactivity lock timeouts
+    - Search entries
+    - Retrieve entry details (username, password, notes, URL)
+"""
 import subprocess
 import os
 from datetime import datetime, timedelta
 
 
 class KeepassxcCliNotFoundError(Exception):
-    pass
+    """
+    Unable to execute KeePassXC CLI
+    """
 
 
 class KeepassxcFileNotFoundError(Exception):
-    pass
+    """
+    Database file not found on the given path
+    """
 
 
 class KeepassxcCliError(Exception):
     """ Contains error message returned by keepassxc-cli """
 
     def __init__(self, message):
+        super(KeepassxcCliError, self).__init__()
         self.message = message
-
-
-def pretty_entry_fmt(s):
-    return s[1:]
-
-
-def cli_entry_fmt(s):
-    return "/" + s
 
 
 class KeepassxcDatabase:
@@ -53,7 +58,6 @@ class KeepassxcDatabase:
             else:
                 raise KeepassxcCliNotFoundError()
 
-        path = os.path.expanduser(path)
         if path != self.path:
             self.path = path
             self.path_checked = False
@@ -82,66 +86,91 @@ class KeepassxcDatabase:
         self.passphrase = None
         self.passphrase_expires_at = None
 
-    def need_passphrase(self):
+    def is_passphrase_needed(self):
+        """
+        Whether the user needs to enter the passphrase to unlock the database
+        """
         if self.passphrase is None:
             return True
-        elif self.inactivity_lock_timeout:
+        if self.inactivity_lock_timeout:
             if datetime.now() > self.passphrase_expires_at:
                 self.passphrase = None
                 return True
-        else:
-            return False
+        return False
 
-    def verify_and_set_passphrase(self, pp):
-        self.passphrase = pp
-        (err, out) = self.run_cli("ls", "-q", self.path)
+    def verify_and_set_passphrase(self, passphrase):
+        """
+        Try to query the database using the given passphrase,
+        save the passphrase if successful
+        """
+        self.passphrase = passphrase
+        err, _ = self.run_cli("ls", "-q", self.path)
         if err:
             self.passphrase = None
             return False
-        else:
-            return True
+        return True
 
     def search(self, query):
+        """
+        Search the database for entry titles that contain the given query string
+        """
         (err, out) = self.run_cli("locate", "-q", self.path, query)
         if err:
             if "No results for that" in err:
                 return []
-            else:
-                raise KeepassxcCliError(err)
-        else:
-            # Entry names in keepassxc-cli start with a "/" (because kdbx files have a tree structure with "folders" etc)
-            # For aesthetic purposes, we are removing the leading "/" here by blindly cutting off the first char
-            # but will add it back any time we need to pass an entry name to the CLI as an argument
-            return [pretty_entry_fmt(l) for l in out.splitlines()]
+            raise KeepassxcCliError(err)
+        # Entry names in keepassxc-cli start with a "/"
+        # (because kdbx files have a tree structure with "folders" etc)
+        # For aesthetic purposes, we are removing the leading "/" here
+        # by blindly cutting off the first char
+        # but will add it back any time we need to pass an entry name
+        # to the CLI as an argument
+        return [l[1:] for l in out.splitlines()]
 
     def get_entry_details(self, entry):
+        """
+        Retrieve details of the given entry:
+        - UserName
+        - Password
+        - URL
+        - Notes
+
+        :param entry: full name of the entry, without the leading '/'
+        :returns: dict of entry attributes and their values
+        """
         attrs = dict()
         for attr in ["UserName", "Password", "URL", "Notes"]:
-            (err, out) = self.run_cli(
-                "show", "-q", "-a", attr, self.path, cli_entry_fmt(entry)
-            )
+            (err, out) = self.run_cli("show", "-q", "-a", attr, self.path, f"/{entry}")
             if err:
                 raise KeepassxcCliError(err)
-            else:
-                attrs[attr] = out.strip("\n")
+            attrs[attr] = out.strip("\n")
         return attrs
 
     def can_execute_cli(self):
+        """
+        Whether we are able to execute the KeePassXC without an OS error
+        """
         try:
-            subprocess.run([self.cli], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run(
+                [self.cli], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False
+            )
             return True
-        except FileNotFoundError:
+        except OSError:
             return False
 
     def run_cli(self, *args):
+        """
+        Execute the KeePassXC CLI with given args, parse output and handle errors
+        """
         try:
-            cp = subprocess.run(
+            proc = subprocess.run(
                 [self.cli, *args],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 input=bytes(self.passphrase, "utf-8"),
+                check=False,
             )
-        except FileNotFoundError:
+        except OSError:
             raise KeepassxcCliNotFoundError()
 
         if self.inactivity_lock_timeout:
@@ -149,4 +178,4 @@ class KeepassxcDatabase:
                 seconds=self.inactivity_lock_timeout
             )
 
-        return (cp.stderr.decode("utf-8"), cp.stdout.decode("utf-8"))
+        return (proc.stderr.decode("utf-8"), proc.stdout.decode("utf-8"))

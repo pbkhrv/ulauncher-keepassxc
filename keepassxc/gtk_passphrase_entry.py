@@ -1,3 +1,6 @@
+"""
+Simple passphrase entry Gtk window
+"""
 import gi
 
 gi.require_version("Gtk", "3.0")
@@ -5,6 +8,10 @@ from gi.repository import Gtk, Gdk
 
 
 class GtkPassphraseEntryWindow(Gtk.Window):
+    """
+    Gtk window with one masked text input field
+    """
+
     def __init__(self, verify_passphrase_fn=None, icon_file=None):
         Gtk.Window.__init__(self, title="Enter Passphrase")
 
@@ -32,43 +39,64 @@ class GtkPassphraseEntryWindow(Gtk.Window):
             self.set_default_icon_from_file(icon_file)
 
     def close_window(self):
+        """
+        Stop it
+        """
         self.destroy()
         Gtk.main_quit()
 
     def enter_pressed(self, entry):
-        pp = entry.get_text()
+        """
+        When Enter pressed, verify the passphrase (if able),
+        close the window and return entered passphrase
+        """
+        passphrase = entry.get_text()
         if self.verify_passphrase_fn:
-            self.show_verifying_passphrase
-            if self.verify_passphrase_fn(pp):
-                self.passphrase = pp
+            self.show_verifying_passphrase()
+            if self.verify_passphrase_fn(passphrase):
+                self.passphrase = passphrase
                 self.close_window()
             else:
                 self.show_incorrect_passphrase()
         else:
-            self.passphrase = pp
+            self.passphrase = passphrase
             self.close_window()
 
-    def key_pressed(self, widget, event):
+    def key_pressed(self, _, event):
+        """
+        When Esc pressed, close the window
+        """
         if event.hardware_keycode == 9:
             self.passphrase = ""
             self.close_window()
 
     def show_verifying_passphrase(self):
+        """
+        Tell the user that we are busy verifying the passphrase
+        """
         self.label.set_text("Verifying passphrase...")
 
     def show_incorrect_passphrase(self):
+        """
+        Tell the user that the passphrase failed verification
+        """
         self.label.set_markup(
             '<span foreground="red">Incorrect passphrase. Please try again.</span>'
         )
         self.entry.set_text("")
 
     def read_passphrase(self):
+        """
+        Show the window and wait for user to enter passphrase
+        """
         self.connect("destroy", Gtk.main_quit)
         self.show_all()
         Gtk.main()
         return self.passphrase
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     Gdk.set_program_class("KeePassXC search")
-    win = GtkPassphraseEntryWindow(icon_file="images/keepassxc-search.svg")
-    print(win.read_passphrase())
+    # pylint: disable=invalid-name
+    window = GtkPassphraseEntryWindow(icon_file="images/keepassxc-search.svg")
+    print(window.read_passphrase())
