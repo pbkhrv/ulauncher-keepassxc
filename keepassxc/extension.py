@@ -13,14 +13,9 @@ from ulauncher.api.shared.event import (
     ItemEnterEvent,
     PreferencesUpdateEvent,
 )
-from ulauncher.api.shared.item.ExtensionResultItem import ExtensionResultItem
-from ulauncher.api.shared.item.ExtensionSmallResultItem import ExtensionSmallResultItem
-from ulauncher.api.shared.action.RenderResultListAction import RenderResultListAction
 from ulauncher.api.shared.action.DoNothingAction import DoNothingAction
-from ulauncher.api.shared.action.ExtensionCustomAction import ExtensionCustomAction
-from ulauncher.api.shared.action.ActionList import ActionList
 from ulauncher.api.shared.action.SetUserQueryAction import SetUserQueryAction
-from ulauncher.api.shared.action.CopyToClipboardAction import CopyToClipboardAction
+
 from .keepassxc_db import (
     KeepassxcDatabase,
     KeepassxcCliNotFoundError,
@@ -29,6 +24,7 @@ from .keepassxc_db import (
 )
 from .gtk_passphrase_entry import GtkPassphraseEntryWindow
 from .wmctrl import activate_window_by_class_name, WmctrlNotFoundError
+from . import render
 
 gi.require_version("Notify", "0.7")
 # pylint: disable=wrong-import-order
@@ -36,74 +32,6 @@ from gi.repository import Notify  # noqa: E402
 
 
 logger = logging.getLogger(__name__)
-
-SEARCH_ICON = "images/keepassxc-search.svg"
-UNLOCK_ICON = "images/keepassxc-search-locked.svg"
-EMPTY_ICON = "images/empty.png"
-ERROR_ICON = "images/error.svg"
-ITEM_ICON = "images/key.svg"
-COPY_ICON = "images/copy.svg"
-NOT_FOUND_ICON = "images/not_found.svg"
-
-KEEPASSXC_CLI_NOT_FOUND_ITEM = ExtensionResultItem(
-    icon=ERROR_ICON,
-    name="Cannot find or execute keepassxc-cli",
-    description="Please make sure that keepassxc-cli is installed and accessible",
-    on_enter=DoNothingAction(),
-)
-
-KEEPASSXC_DB_NOT_FOUND_ITEM = ExtensionResultItem(
-    icon=ERROR_ICON,
-    name="Cannot find the database file",
-    description="Please verify the database file path in extension preferences",
-    on_enter=DoNothingAction(),
-)
-
-NEED_PASSPHRASE_ITEM = ExtensionResultItem(
-    icon=UNLOCK_ICON,
-    name="Unlock KeePassXC database",
-    description="Enter passphrase to unlock the KeePassXC database",
-    on_enter=ExtensionCustomAction({"action": "read_passphrase"}),
-)
-
-ENTER_QUERY_ITEM = ExtensionResultItem(
-    icon=SEARCH_ICON,
-    name="Enter search query...",
-    description="Please enter your search query",
-    on_enter=DoNothingAction(),
-)
-
-NO_SEARCH_RESULTS_ITEM = ExtensionResultItem(
-    icon=NOT_FOUND_ICON,
-    name="No matching entries found...",
-    description="Please check spelling or make the query less specific",
-    on_enter=DoNothingAction(),
-)
-
-
-def more_results_available_item(cnt):
-    """
-    Item showing how many more results are available
-    """
-    return ExtensionSmallResultItem(
-        icon=EMPTY_ICON,
-        name="...{} more results available, please refine the search query...".format(
-            cnt
-        ),
-        on_enter=DoNothingAction(),
-    )
-
-
-def keepassxc_cli_error_item(message):
-    """
-    Error message from attempting to call keepassxc CLI
-    """
-    return ExtensionResultItem(
-        icon=ERROR_ICON,
-        name="Error while calling keepassxc CLI",
-        description=message,
-        on_enter=DoNothingAction(),
-    )
 
 
 def activate_passphrase_window():
@@ -223,33 +151,6 @@ class KeepassxcExtension(Extension):
         self.active_entry_search_restore = None
 
 
-# REORG: move into "render.py"
-def render_search_results(keyword, arg, entries, max_items):
-    """
-    Build list of result items `max_items` long
-    """
-    items = []
-    if not entries:
-        items.append(NO_SEARCH_RESULTS_ITEM)
-    else:
-        for entry in entries[:max_items]:
-            action = ExtensionCustomAction(
-                {
-                    "action": "activate_entry",
-                    "entry": entry,
-                    "keyword": keyword,
-                    "prev_query_arg": arg,
-                },
-                keep_app_open=True,
-            )
-            items.append(
-                ExtensionSmallResultItem(icon=ITEM_ICON, name=entry, on_enter=action)
-            )
-        if len(entries) > max_items:
-            items.append(more_results_available_item(len(entries) - max_items))
-    return RenderResultListAction(items)
-
-
 class KeywordQueryEventListener(EventListener):
     """ KeywordQueryEventListener class used to manage user input """
 
@@ -265,14 +166,14 @@ class KeywordQueryEventListener(EventListener):
             )
 
             if self.keepassxc_db.is_passphrase_needed():
-                return RenderResultListAction([NEED_PASSPHRASE_ITEM])
+                return render.ask_to_enter_passphrase()
             return self.process_keyword_query(event, extension)
         except KeepassxcCliNotFoundError:
-            return RenderResultListAction([KEEPASSXC_CLI_NOT_FOUND_ITEM])
+            return render.cli_not_found_error()
         except KeepassxcFileNotFoundError:
-            return RenderResultListAction([KEEPASSXC_DB_NOT_FOUND_ITEM])
+            return render.db_file_not_found_error()
         except KeepassxcCliError as exc:
-            return RenderResultListAction([keepassxc_cli_error_item(exc.message)])
+            return render.keepassxc_cli_error(exc.message)
 
     def process_keyword_query(self, event, extension):
         """
@@ -283,86 +184,35 @@ class KeywordQueryEventListener(EventListener):
 
         if not query_arg:
             if extension.recent_active_entries:
-                return render_search_results(
+                return render.search_results(
                     query_keyword,
                     "",
                     extension.recent_active_entries,
                     extension.get_max_result_items(),
                 )
-            return RenderResultListAction([ENTER_QUERY_ITEM])
+            return render.ask_to_enter_query()
 
         if extension.check_and_reset_active_entry(query_keyword, query_arg):
-            return self.show_active_entry(query_arg)
+            details = self.keepassxc_db.get_entry_details(query_arg)
+            return render.active_entry(details)
 
         prev_query_arg = extension.check_and_reset_search_restore(query_arg)
         if prev_query_arg:
             return SetUserQueryAction("{} {}".format(query_keyword, prev_query_arg))
 
         entries = self.keepassxc_db.search(query_arg)
-        return render_search_results(
+        return render.search_results(
             query_keyword, query_arg, entries, extension.get_max_result_items()
         )
-
-    def show_active_entry(self, entry):
-        """
-        Retrieve entry details from database and render them
-        """
-        # REORG: break this up into
-        # - "get_entry_details" + erorr handling
-        # - render active entry
-        items = []
-        details = self.keepassxc_db.get_entry_details(entry)
-        attrs = [
-            ("Password", "password"),
-            ("UserName", "username"),
-            ("URL", "URL"),
-            ("Notes", "notes"),
-        ]
-        for attr, attr_nice in attrs:
-            val = details.get(attr, "")
-            if val:
-                action = ActionList(
-                    [
-                        ExtensionCustomAction(
-                            {
-                                "action": "show_notification",
-                                "summary": "{} copied to the clipboard.".format(
-                                    attr_nice.capitalize()
-                                ),
-                            }
-                        ),
-                        CopyToClipboardAction(val),
-                    ]
-                )
-
-                if attr == "Password":
-                    items.append(
-                        ExtensionSmallResultItem(
-                            icon=COPY_ICON,
-                            name="Copy password to the clipboard",
-                            on_enter=action,
-                        )
-                    )
-                else:
-                    items.append(
-                        ExtensionResultItem(
-                            icon=COPY_ICON,
-                            name="{}: {}".format(attr_nice.capitalize(), val),
-                            description="Copy {} to the clipboard".format(attr_nice),
-                            on_enter=action,
-                        )
-                    )
-        return RenderResultListAction(items)
 
 
 class ItemEnterEventListener(EventListener):
     """ KeywordQueryEventListener class used to manage user input """
 
-    # REORG: use "method_caller" to move this logic into Keepassxc class
-
     def __init__(self, keepassxc_db):
         self.keepassxc_db = keepassxc_db
 
+    # TODO replace with CallObjectMethodEventListener
     def on_event(self, event, extension):
         try:
             data = event.get_data()
@@ -380,11 +230,11 @@ class ItemEnterEventListener(EventListener):
             if action == "show_notification":
                 Notify.Notification.new(data.get("summary")).show()
         except KeepassxcCliNotFoundError:
-            return RenderResultListAction([KEEPASSXC_CLI_NOT_FOUND_ITEM])
+            return render.cli_not_found_error()
         except KeepassxcFileNotFoundError:
-            return RenderResultListAction([KEEPASSXC_DB_NOT_FOUND_ITEM])
+            return render.db_file_not_found_error()
         except KeepassxcCliError as exc:
-            return RenderResultListAction([keepassxc_cli_error_item(exc.message)])
+            return render.keepassxc_cli_error(exc.message)
         return DoNothingAction()
 
     def read_verify_passphrase(self):
