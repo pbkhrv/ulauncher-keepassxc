@@ -212,7 +212,7 @@ class ItemEnterEventListener(EventListener):
     def __init__(self, keepassxc_db):
         self.keepassxc_db = keepassxc_db
 
-    # TODO replace with CallObjectMethodEventListener
+    # FUTURE replace with CallObjectMethodEventListener
     def on_event(self, event, extension):
         try:
             data = event.get_data()

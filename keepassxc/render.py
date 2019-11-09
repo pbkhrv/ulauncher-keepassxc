@@ -93,7 +93,7 @@ def ask_to_enter_passphrase():
                 icon="images/keepassxc-search-locked.svg",
                 name="Unlock KeePassXC database",
                 description="Enter passphrase to unlock the KeePassXC database",
-                # TODO replace with call_object_method
+                # FUTURE replace with call_object_method
                 on_enter=ExtensionCustomAction({"action": "read_passphrase"}),
             )
         ]
@@ -125,7 +125,7 @@ def search_results(keyword, arg, entries, max_items):
         items.append(NO_SEARCH_RESULTS_ITEM)
     else:
         for entry in entries[:max_items]:
-            # TODO replace with call_object_method
+            # FUTURE replace with call_object_method
             action = ExtensionCustomAction(
                 {
                     "action": "activate_entry",
@@ -161,7 +161,7 @@ def active_entry(details):
         if val:
             action = ActionList(
                 [
-                    # TODO replace with call_object_method
+                    # FUTURE replace with call_object_method
                     ExtensionCustomAction(
                         {
                             "action": "show_notification",
