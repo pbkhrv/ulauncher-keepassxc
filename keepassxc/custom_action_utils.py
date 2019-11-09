@@ -24,6 +24,7 @@ def get_callable_object(key):
     return __CALLABLE_OBJECTS.get(key, None)
 
 
+# TODO replace this with a more generic CallableAction - pass then later execute any callable object (method, function etc)
 class CallMethodAction(ExtensionCustomAction):
     """
     Call specified method with specified arguments from a ItemEnterEvent listener
@@ -51,8 +52,7 @@ class CallMethodAction(ExtensionCustomAction):
     def __init__(self, method, *args, **kwargs):
         obj_key = get_callable_object_key(method)
         super(CallMethodAction, self).__init__(
-            (obj_key, method.__name__, args, kwargs),
-            keep_app_open=True,
+            (obj_key, method.__name__, args, kwargs), keep_app_open=True
         )
         self.data = (obj_key, method.__name__, args, kwargs)
 
