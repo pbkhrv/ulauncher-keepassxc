@@ -48,6 +48,26 @@ Look at the `Github work` entry:
 
 Please install [wmctrl](http://tripie.sweb.cz/utils/wmctrl/) - it's a utility that ulauncher-keepassxc calls to "activate" the passphrase window and bring it to the top:
 
+## Development
+
+Install necessary packages:
+
+`pip install -r dev/requirements.txt`
+
+Run unit tests:
+
+`make test`
+
+Quit Ulauncher. Then run it in debug mode:
+
+`make run_ul`
+
+Run extension in the terminal, connecting to Ulauncher in debug mode:
+
+`make run`
+
+(if that doesn't work, check the connection string URL printed out by Ulauncher and modify the Makefile accordingly.)
+
 **Ubuntu and Debian**
 ```shell
 sudo apt-get install wmctrl
