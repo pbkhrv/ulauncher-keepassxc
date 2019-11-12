@@ -83,7 +83,7 @@ def keepassxc_cli_error(message):
     )
 
 
-def ask_to_enter_passphrase():
+def ask_to_enter_passphrase(db_path):
     """
     Ask user to enter the passphrase to unlock database
     """
@@ -92,7 +92,7 @@ def ask_to_enter_passphrase():
             ExtensionResultItem(
                 icon="images/keepassxc-search-locked.svg",
                 name="Unlock KeePassXC database",
-                description="Enter passphrase to unlock the KeePassXC database",
+                description=db_path,
                 # FUTURE replace with call_object_method
                 on_enter=ExtensionCustomAction({"action": "read_passphrase"}),
             )

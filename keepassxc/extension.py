@@ -166,7 +166,7 @@ class KeywordQueryEventListener(EventListener):
             )
 
             if self.keepassxc_db.is_passphrase_needed():
-                return render.ask_to_enter_passphrase()
+                return render.ask_to_enter_passphrase(extension.get_db_path())
             return self.process_keyword_query(event, extension)
         except KeepassxcCliNotFoundError:
             return render.cli_not_found_error()
