@@ -1,6 +1,7 @@
 """
 Simple passphrase entry Gtk window
 """
+from typing import Optional, Callable
 import gi
 
 gi.require_version("Gtk", "3.0")
@@ -13,7 +14,11 @@ class GtkPassphraseEntryWindow(Gtk.Window):
     Gtk window with one masked text input field
     """
 
-    def __init__(self, verify_passphrase_fn=None, icon_file=None):
+    def __init__(
+        self,
+        verify_passphrase_fn: Optional[Callable[[str], bool]] = None,
+        icon_file: Optional[str] = None,
+    ) -> None:
         Gtk.Window.__init__(self, title="Enter Passphrase")
 
         self.verify_passphrase_fn = verify_passphrase_fn
@@ -39,14 +44,14 @@ class GtkPassphraseEntryWindow(Gtk.Window):
         if icon_file:
             self.set_default_icon_from_file(icon_file)
 
-    def close_window(self):
+    def close_window(self) -> None:
         """
         Stop it
         """
         self.destroy()
         Gtk.main_quit()
 
-    def enter_pressed(self, entry):
+    def enter_pressed(self, entry: Gtk.Entry) -> None:
         """
         When Enter pressed, verify the passphrase (if able),
         close the window and return entered passphrase
@@ -63,7 +68,7 @@ class GtkPassphraseEntryWindow(Gtk.Window):
             self.passphrase = passphrase
             self.close_window()
 
-    def key_pressed(self, _, event):
+    def key_pressed(self, _, event) -> None:
         """
         When Esc pressed, close the window
         """
@@ -71,13 +76,13 @@ class GtkPassphraseEntryWindow(Gtk.Window):
             self.passphrase = ""
             self.close_window()
 
-    def show_verifying_passphrase(self):
+    def show_verifying_passphrase(self) -> None:
         """
         Tell the user that we are busy verifying the passphrase
         """
         self.label.set_text("Verifying passphrase...")
 
-    def show_incorrect_passphrase(self):
+    def show_incorrect_passphrase(self) -> None:
         """
         Tell the user that the passphrase failed verification
         """
@@ -86,7 +91,7 @@ class GtkPassphraseEntryWindow(Gtk.Window):
         )
         self.entry.set_text("")
 
-    def read_passphrase(self):
+    def read_passphrase(self) -> str:
         """
         Show the window and wait for user to enter passphrase
         """

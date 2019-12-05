@@ -6,6 +6,7 @@ Features:
     - Search entries
     - Retrieve entry details (username, password, notes, URL)
 """
+from typing import List, Dict, Tuple
 import subprocess
 import os
 from datetime import datetime, timedelta
@@ -49,7 +50,7 @@ class KeepassxcDatabase:
         self.passphrase_expires_at = None
         self.inactivity_lock_timeout = 0
 
-    def initialize(self, path, inactivity_lock_timeout):
+    def initialize(self, path: str, inactivity_lock_timeout: int) -> None:
         """
         Check that
         - we can call invoke the CLI
@@ -75,7 +76,7 @@ class KeepassxcDatabase:
             else:
                 raise KeepassxcFileNotFoundError()
 
-    def change_path(self, new_path):
+    def change_path(self, new_path: str) -> None:
         """
         Change the path to the database file and lock the database.
         """
@@ -84,7 +85,7 @@ class KeepassxcDatabase:
         self.passphrase = None
         self.passphrase_expires_at = None
 
-    def change_inactivity_lock_timeout(self, secs):
+    def change_inactivity_lock_timeout(self, secs: int) -> None:
         """
         Change the inactivity lock timeout and immediately lock the database.
         """
@@ -104,7 +105,7 @@ class KeepassxcDatabase:
                 return True
         return False
 
-    def verify_and_set_passphrase(self, passphrase):
+    def verify_and_set_passphrase(self, passphrase: str) -> bool:
         """
         Try to query the database using the given passphrase,
         save the passphrase if successful
@@ -116,7 +117,7 @@ class KeepassxcDatabase:
             return False
         return True
 
-    def search(self, query):
+    def search(self, query: str) -> List[str]:
         """
         Search the database for entry titles that contain the given query string
         """
@@ -136,7 +137,7 @@ class KeepassxcDatabase:
         # to the CLI as an argument
         return [l[1:] for l in out.splitlines()]
 
-    def get_entry_details(self, entry):
+    def get_entry_details(self, entry: str) -> Dict[str, str]:
         """
         Retrieve details of the given entry:
         - UserName
@@ -158,7 +159,7 @@ class KeepassxcDatabase:
             attrs[attr] = out.strip("\n")
         return attrs
 
-    def can_execute_cli(self):
+    def can_execute_cli(self) -> bool:
         """
         Whether we are able to execute the KeePassXC without an OS error
         """
@@ -170,7 +171,7 @@ class KeepassxcDatabase:
         except OSError:
             return False
 
-    def run_cli(self, *args):
+    def run_cli(self, *args) -> Tuple[str, str]:
         """
         Execute the KeePassXC CLI with given args, parse output and handle errors
         """

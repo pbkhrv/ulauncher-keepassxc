@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 from threading import Timer
+from typing import Optional, Type
 import gi
 from ulauncher.api.client.Extension import Extension
 from ulauncher.api.client.EventListener import EventListener
@@ -13,6 +14,7 @@ from ulauncher.api.shared.event import (
     ItemEnterEvent,
     PreferencesUpdateEvent,
 )
+from ulauncher.api.shared.action.BaseAction import BaseAction
 from ulauncher.api.shared.action.DoNothingAction import DoNothingAction
 from ulauncher.api.shared.action.SetUserQueryAction import SetUserQueryAction
 
@@ -34,7 +36,7 @@ from gi.repository import Notify  # noqa: E402
 logger = logging.getLogger(__name__)
 
 
-def activate_passphrase_window():
+def activate_passphrase_window() -> None:
     """
     Use wmctrl to bring the passphrase window to the top
 
@@ -49,7 +51,7 @@ def activate_passphrase_window():
         )
 
 
-def current_script_path():
+def current_script_path() -> str:
     """
     Return path to where the currently executing script is located
     """
@@ -74,41 +76,41 @@ class KeepassxcExtension(Extension):
         self.active_entry_search_restore = None
         self.recent_active_entries = []
 
-    def get_db_path(self):
+    def get_db_path(self) -> str:
         """
         Normalized and expanded path to the database file
         """
         return os.path.expanduser(self.preferences["database-path"])
 
-    def get_max_result_items(self):
+    def get_max_result_items(self) -> int:
         """
         Maximum number of search results to show on screen
         """
         return int(self.preferences["max-results"])
 
-    def get_inactivity_lock_timeout(self):
+    def get_inactivity_lock_timeout(self) -> int:
         """
         How long to wait to lock the database after last user interaction
         """
         return int(self.preferences["inactivity-lock-timeout"])
 
-    def set_active_entry(self, keyword, entry):
+    def set_active_entry(self, keyword: str, entry: str) -> None:
         """
         Save the search keyword and full name of the entry that user activated
         by selecting one of the search results
         """
         self.active_entry = (keyword, entry)
 
-    def check_and_reset_active_entry(self, keyword, entry):
+    def check_and_reset_active_entry(self, keyword: str, entry: str) -> bool:
         """
         Whether the search query is actually a request to render
         the active entry that was saved just before
         """
-        entry = self.active_entry == (keyword, entry)
+        is_match = self.active_entry == (keyword, entry)
         self.active_entry = None
-        return entry
+        return is_match
 
-    def set_active_entry_search_restore(self, entry, query_arg):
+    def set_active_entry_search_restore(self, entry: str, query_arg: str) -> None:
         """
         Save the search arg that we should return to if given entry
         is being erased - allows user to back out of an active entry
@@ -116,7 +118,7 @@ class KeepassxcExtension(Extension):
         """
         self.active_entry_search_restore = (entry, query_arg)
 
-    def check_and_reset_search_restore(self, query_arg):
+    def check_and_reset_search_restore(self, query_arg: str) -> Optional[str]:
         """
         Whether to re-run a search query after backing out from an active entry
         """
@@ -127,7 +129,7 @@ class KeepassxcExtension(Extension):
             return prev_query_arg if some_chars_erased else None
         return None
 
-    def add_recent_active_entry(self, entry):
+    def add_recent_active_entry(self, entry: str) -> None:
         """
         Add an entry to the head of the recent active entries list.
         Make sure the entry appears in the list only once.
@@ -139,7 +141,7 @@ class KeepassxcExtension(Extension):
         max_items = self.get_max_result_items()
         self.recent_active_entries = self.recent_active_entries[:max_items]
 
-    def database_path_changed(self):
+    def database_path_changed(self) -> None:
         """
         We are now using a different database file - do something about that.
         """
@@ -159,7 +161,7 @@ class KeywordQueryEventListener(EventListener):
     def __init__(self, keepassxc_db):
         self.keepassxc_db = keepassxc_db
 
-    def on_event(self, event, extension):
+    def on_event(self, event, extension) -> Type[BaseAction]:
         try:
             self.keepassxc_db.initialize(
                 extension.get_db_path(), extension.get_inactivity_lock_timeout()
@@ -175,7 +177,7 @@ class KeywordQueryEventListener(EventListener):
         except KeepassxcCliError as exc:
             return render.keepassxc_cli_error(exc.message)
 
-    def process_keyword_query(self, event, extension):
+    def process_keyword_query(self, event, extension) -> Type[BaseAction]:
         """
         Handle a search query entered by user
         """
@@ -213,12 +215,13 @@ class ItemEnterEventListener(EventListener):
         self.keepassxc_db = keepassxc_db
 
     # FUTURE replace with CallObjectMethodEventListener
-    def on_event(self, event, extension):
+    def on_event(self, event, extension) -> Type[BaseAction]:
         try:
             data = event.get_data()
             action = data.get("action", None)
             if action == "read_passphrase":
-                return self.read_verify_passphrase()
+                self.read_verify_passphrase()
+                return DoNothingAction()
             if action == "activate_entry":
                 keyword = data.get("keyword", None)
                 entry = data.get("entry", None)
@@ -237,7 +240,7 @@ class ItemEnterEventListener(EventListener):
             return render.keepassxc_cli_error(exc.message)
         return DoNothingAction()
 
-    def read_verify_passphrase(self):
+    def read_verify_passphrase(self) -> None:
         """
         Create a passphrase entry window and get the passphrase, or not
         """
@@ -263,7 +266,7 @@ class PreferencesUpdateEventListener(EventListener):
     def __init__(self, keepassxc_db):
         self.keepassxc_db = keepassxc_db
 
-    def on_event(self, event, extension):
+    def on_event(self, event, extension) -> None:
         if event.new_value != event.old_value:
             if event.id == "database-path":
                 # REORG: only call keepassxc
