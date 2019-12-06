@@ -12,7 +12,7 @@ A [Ulauncher](https://ulauncher.io/) extension to search your [KeePassXC](https:
 ## Requirements
 
 - Install a recent version of [KeePassXC](https://keepassxc.org/download/) (tested with 2.4.3 and 2.5.0)
-- Make sure you can execute `keepassxc-cli` in a terminal
+- Make sure you can execute `keepassxc-cli` in a terminal without errors
 
 ## Installation
 
@@ -49,29 +49,62 @@ Look at the `Github work` entry:
 Please install [wmctrl](http://tripie.sweb.cz/utils/wmctrl/) - it's a utility that ulauncher-keepassxc calls to "activate" the passphrase window and bring it to the top:
 
 **Ubuntu and Debian**
+
 ```shell
 sudo apt-get install wmctrl
 ```
 
 ## Development
 
-Install necessary packages:
+I use the following tools while working on this extension:
 
-`pip install -r dev/requirements.txt`
+- [`Black`](https://github.com/psf/black) code formatter
+- `pytest`
+- `pylint` with the `flake8` plugin
+- `mypy` static type checker
 
-Run unit tests:
+You can install them in one shot (except for `Black` - that's up to you) by running:
 
-`make test`
+```shell
+pip install -r scripts/requirements.txt
+```
+
+Check PEP8 compliance, perform static type analysis and run unit tests:
+
+```shell
+make test
+```
+
+Backup the "production" version of the extension and symlink the development version into Ulauncher's extension directory:
+
+```shell
+make symlink
+```
 
 Quit Ulauncher. Then run it in debug mode:
 
-`make run_ul`
+```shell
+make run_ul
+```
 
-Run extension in the terminal, connecting to Ulauncher in debug mode:
+Run extension in the terminal, connect it to Ulauncher in debug mode:
 
-`make run`
+```shell
+make run
+```
 
 (if that doesn't work, check the connection string URL printed out by Ulauncher and modify the Makefile accordingly.)
+
+Unlink the development version of the extension from Ulauncher and replace it with whatever was there before:
+
+```shell
+make unlink
+```
+
+## Contributions
+
+Issues and pull requests are welcome!
+
 
 ## Inspiration and thanks
 
