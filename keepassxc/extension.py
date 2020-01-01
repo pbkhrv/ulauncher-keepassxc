@@ -5,7 +5,7 @@ import logging
 import os
 import sys
 from threading import Timer
-from typing import Optional, Type
+from typing import Optional
 import gi
 from ulauncher.api.client.Extension import Extension
 from ulauncher.api.client.EventListener import EventListener
@@ -161,7 +161,7 @@ class KeywordQueryEventListener(EventListener):
     def __init__(self, keepassxc_db):
         self.keepassxc_db = keepassxc_db
 
-    def on_event(self, event, extension) -> Type[BaseAction]:
+    def on_event(self, event, extension) -> BaseAction:
         try:
             self.keepassxc_db.initialize(
                 extension.get_db_path(), extension.get_inactivity_lock_timeout()
@@ -177,7 +177,7 @@ class KeywordQueryEventListener(EventListener):
         except KeepassxcCliError as exc:
             return render.keepassxc_cli_error(exc.message)
 
-    def process_keyword_query(self, event, extension) -> Type[BaseAction]:
+    def process_keyword_query(self, event, extension) -> BaseAction:
         """
         Handle a search query entered by user
         """
@@ -215,7 +215,7 @@ class ItemEnterEventListener(EventListener):
         self.keepassxc_db = keepassxc_db
 
     # FUTURE replace with CallObjectMethodEventListener
-    def on_event(self, event, extension) -> Type[BaseAction]:
+    def on_event(self, event, extension) -> BaseAction:
         try:
             data = event.get_data()
             action = data.get("action", None)

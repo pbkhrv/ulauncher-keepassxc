@@ -1,7 +1,7 @@
 """
 Functions that deal with rendering Ulauncher result items
 """
-from typing import Type, List, Dict
+from typing import List, Dict
 from ulauncher.api.shared.item.ResultItem import ResultItem
 from ulauncher.api.shared.item.ExtensionResultItem import ExtensionResultItem
 from ulauncher.api.shared.item.ExtensionSmallResultItem import ExtensionSmallResultItem
@@ -22,7 +22,7 @@ NO_SEARCH_RESULTS_ITEM = ExtensionResultItem(
 )
 
 
-def item_more_results_available(cnt: int) -> Type[ResultItem]:
+def item_more_results_available(cnt: int) -> ResultItem:
     """
     Item showing how many more results are available
     """
@@ -35,7 +35,7 @@ def item_more_results_available(cnt: int) -> Type[ResultItem]:
     )
 
 
-def cli_not_found_error() -> Type[BaseAction]:
+def cli_not_found_error() -> BaseAction:
     """
     Was not able to execute keepassxc-cli because it was either
     not found or wrong permissions
@@ -53,7 +53,7 @@ def cli_not_found_error() -> Type[BaseAction]:
     )
 
 
-def db_file_not_found_error() -> Type[BaseAction]:
+def db_file_not_found_error() -> BaseAction:
     """
     Database file specified in preferences could not be found
     """
@@ -69,7 +69,7 @@ def db_file_not_found_error() -> Type[BaseAction]:
     )
 
 
-def keepassxc_cli_error(message: str) -> Type[BaseAction]:
+def keepassxc_cli_error(message: str) -> BaseAction:
     """
     Error message received while attempting to execute keepassxc-cli
     """
@@ -85,7 +85,7 @@ def keepassxc_cli_error(message: str) -> Type[BaseAction]:
     )
 
 
-def ask_to_enter_passphrase(db_path: str) -> Type[BaseAction]:
+def ask_to_enter_passphrase(db_path: str) -> BaseAction:
     """
     Ask user to enter the passphrase to unlock database
     """
@@ -102,7 +102,7 @@ def ask_to_enter_passphrase(db_path: str) -> Type[BaseAction]:
     )
 
 
-def ask_to_enter_query() -> Type[BaseAction]:
+def ask_to_enter_query() -> BaseAction:
     """
     Ask user to start entering the search query
     """
@@ -120,7 +120,7 @@ def ask_to_enter_query() -> Type[BaseAction]:
 
 def search_results(
     keyword: str, arg: str, entries: List[str], max_items: int
-) -> Type[BaseAction]:
+) -> BaseAction:
     """
     Build list of result items `max_items` long
     """
@@ -149,7 +149,7 @@ def search_results(
     return RenderResultListAction(items)
 
 
-def active_entry(details: Dict[str, str]) -> Type[BaseAction]:
+def active_entry(details: Dict[str, str]) -> BaseAction:
     """
     Show details of an entry and allow various items to be copied to the clipboard
     """
