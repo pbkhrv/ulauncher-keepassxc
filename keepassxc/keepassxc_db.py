@@ -124,7 +124,7 @@ class KeepassxcDatabase:
         if self.is_passphrase_needed():
             raise KeepassxcLockedDbError()
 
-        (err, out) = self.run_cli("locate", "-q", self.path, query)
+        (err, out) = self.run_cli("search", "-q", self.path, query)
         if err:
             if "No results for that" in err:
                 return []
