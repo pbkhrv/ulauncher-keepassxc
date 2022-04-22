@@ -93,6 +93,12 @@ class KeepassxcExtension(Extension):
         How long to wait to lock the database after last user interaction
         """
         return int(self.preferences["inactivity-lock-timeout"])
+    
+    def get_yubikey_slot(self) -> str:
+        """
+        Get the YubiKey slot number to use
+        """
+        return self.preferences["yubikey-slot"]
 
     def set_active_entry(self, keyword: str, entry: str) -> None:
         """
@@ -164,7 +170,7 @@ class KeywordQueryEventListener(EventListener):
     def on_event(self, event, extension) -> BaseAction:
         try:
             self.keepassxc_db.initialize(
-                extension.get_db_path(), extension.get_inactivity_lock_timeout()
+                extension.get_db_path(), extension.get_inactivity_lock_timeout(), extension.get_yubikey_slot()
             )
 
             if self.keepassxc_db.is_passphrase_needed():

@@ -49,8 +49,9 @@ class KeepassxcDatabase:
         self.passphrase = None
         self.passphrase_expires_at = None
         self.inactivity_lock_timeout = 0
+        self.yubikey_slot = None
 
-    def initialize(self, path: str, inactivity_lock_timeout: int) -> None:
+    def initialize(self, path: str, inactivity_lock_timeout: int, yubikey_slot: str) -> None:
         """
         Check that
         - we can call invoke the CLI
@@ -75,6 +76,8 @@ class KeepassxcDatabase:
                 self.path_checked = True
             else:
                 raise KeepassxcFileNotFoundError()
+        
+        self.yubikey_slot = yubikey_slot
 
     def change_path(self, new_path: str) -> None:
         """
@@ -175,9 +178,12 @@ class KeepassxcDatabase:
         """
         Execute the KeePassXC CLI with given args, parse output and handle errors
         """
+        command = [self.cli, *args]
+        if self.yubikey_slot:
+            command = [self.cli, *args, "-y", self.yubikey_slot]
         try:
             proc = subprocess.run(
-                [self.cli, *args],
+                command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 input=bytes(self.passphrase, "utf-8"),
