@@ -33,6 +33,13 @@
       "name": "Inactivity lock timeout",
       "description": "Lock database if extension hasn't been used for a certain number of seconds. Set to 0 to never lock",
       "default_value": "300"
+    },
+    {
+      "id": "yubikey-slot",
+      "type": "input",
+      "name": "Yubikey slot",
+      "description": "Yubikey slot and optional serial used to access the database (e.g., 1:7370001)",
+      "default_value": "2"
     }
   ]
 }
