@@ -126,6 +126,8 @@ class KeepassxcDatabase:
 
         (err, out) = self.run_cli("locate", "-q", self.path, query)
         if err:
+            (err, out) = self.run_cli("search", "-q", self.path, query)
+        if err:
             if "No results for that" in err:
                 return []
             raise KeepassxcCliError(err)
